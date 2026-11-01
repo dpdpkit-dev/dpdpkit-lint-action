@@ -1,0 +1,47 @@
+name: dpdp-lint
+description: Fail CI when a dpdpkit.yaml has no notice, or a purpose has no retention rule (DPDP Act readiness check).
+author: dpdpkit
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  config:
+    description: Newline- or space-separated dpdpkit.yaml paths to lint.
+    default: dpdpkit.yaml
+  strict:
+    description: Also fail on warnings (for example placeholder text left in the notice).
+    default: "false"
+  version:
+    description: dpdpkit-core version to install, such as 0.3.0. Empty installs the latest release.
+    default: ""
+  python-version:
+    description: Python used to run the linter.
+    default: "3.12"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v6
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install dpdpkit-core
+      shell: bash
+      env:
+        DPDP_VERSION: ${{ inputs.version }}
+      run: |
+        spec="dpdpkit-core"
+        if [ -n "$DPDP_VERSION" ]; then spec="dpdpkit-core==$DPDP_VERSION"; fi
+        python -m pip install --disable-pip-version-check --quiet "$spec"
+    - name: dpdp-lint
+      shell: bash
+      env:
+        DPDP_CONFIG: ${{ inputs.config }}
+        DPDP_STRICT: ${{ inputs.strict }}
+      run: |
+        args=(--format github)
+        if [ "$DPDP_STRICT" = "true" ]; then args+=(--strict); fi
+        # Word-splitting is intended: the input is a list of paths.
+        set -f
+        # shellcheck disable=SC2086
+        dpdpkit lint $DPDP_CONFIG "${args[@]}"

@@ -1,0 +1,30 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  passes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./
+        with:
+          config: fixtures/dpdpkit.yaml
+  fails-on-missing-retention:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - id: lint
+        uses: ./
+        continue-on-error: true
+        with:
+          config: fixtures/missing-retention.yaml
+      - name: The action must have failed
+        if: steps.lint.outcome != 'failure'
+        run: echo "expected dpdp-lint to fail" && exit 1
